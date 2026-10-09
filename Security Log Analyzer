@@ -1,0 +1,59 @@
+name: Security Log Analyzer
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate sample logs
+        run: |
+          if [ ! -f security.log ]; then
+            python security_log_analyzer.py --sample
+          fi
+
+      - name: Analyze security logs
+        run: |
+          python security_log_analyzer.py security.log \
+            --threshold 5 \
+            --window 10 \
+            --after-failures 3 \
+            --json alerts.json \
+            --csv alerts.csv
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-analysis-reports
+          path: |
+            alerts.json
+            alerts.csv
+          if-no-files-found: ignore
+```
+
+## Required repository structure
+
+text
+```
+security-log-analyzer/
+├── security_log_analyzer.py
+├── security.log
+└── .github/
+    └── workflows/
+        └── security-analysis.yml
